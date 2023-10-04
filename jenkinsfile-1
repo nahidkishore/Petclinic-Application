@@ -1,0 +1,67 @@
+pipeline {
+    agent any
+    
+     tools{
+        jdk 'jdk17'
+        maven 'maven3'
+    }
+    
+     environment {
+        SCANNER_HOME=tool 'sonar-scanner'
+    }
+
+    stages {
+        
+        stage("Clean Workspace"){
+            steps{
+                cleanWs()
+            }
+        }
+
+
+        stage("Git Checkout"){
+            steps{
+               git branch: 'main', url: 'https://github.com/nahidkishore/Petclinic-Application.git'
+            }
+        }
+        
+        stage("Compile"){
+            steps{
+                sh "mvn clean compile -DskipTests=true"
+            }
+        }
+          stage("Test Cases"){
+            steps{
+                sh "mvn test -DskipTests=true"
+            }
+        }
+        
+        stage("Sonarqube Analysis "){
+            steps{
+                withSonarQubeEnv('sonar-server') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Petclinic \
+                    -Dsonar.java.binaries=. \
+                    -Dsonar.projectKey=Petclinic '''
+                }
+            }
+        }
+        
+        stage("SonarQube Quality Gate"){
+       
+             steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+         }
+
+     }
+     
+     stage("OWASP Dependency Check"){
+           steps{
+                dependencyCheck additionalArguments: '--scan ./ --format XML ' , odcInstallation: 'DP-Check'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        
+     
+      
+    }
+}
