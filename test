@@ -49,25 +49,19 @@ pipeline {
         stage("SonarQube Quality Gate"){
        
              steps {
-                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+                waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token' 
          }
 
      }
      
-     stage("OWASP Dependency Check"){
-           steps{
-                dependencyCheck additionalArguments: '--scan ./ --format XML ' , odcInstallation: 'DP-Check'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-            }
-        }
+    
         
          stage("Build"){
             steps{
                 sh "mvn clean install -DskipTests=true"
             }
         } 
-
-        stage('Docker Build and Test'){
+        stage('Docker Build Application'){
             steps{
                 sh "docker build . -t petclinic-application"
 
@@ -88,7 +82,6 @@ pipeline {
                }
            }
          }
-
       
     }
 }

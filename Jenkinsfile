@@ -40,6 +40,18 @@ pipeline {
                 }
             }
         }
+
+        stage('Sonarqube Analysis') {
+      environment {
+        SONAR_URL = "http://54.196.166.121:9000"
+      }
+      steps {
+        withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
+          sh 'mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
+        }
+      }
+    }
+
         
         stage("OWASP Dependency Check"){
             steps{
