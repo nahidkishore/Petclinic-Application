@@ -89,6 +89,19 @@ pipeline {
            }
          }
 
+            stage('Clean up containers') {   //if container runs it will stop and remove this block
+          steps {
+           script {
+             try {
+                sh 'docker stop petclinic-application'
+                sh 'docker rm petclinic-application'
+                } catch (Exception e) {
+                  echo "Container petclinic-application not found, moving to next stage"  
+                }
+            }
+          }
+        }
+
           stage("TRIVY"){
             steps{
 
