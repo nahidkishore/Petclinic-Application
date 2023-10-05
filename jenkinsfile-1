@@ -89,6 +89,19 @@ pipeline {
            }
          }
 
+          stage("TRIVY"){
+            steps{
+
+                withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]){
+                     
+                    sh "trivy image nahid0002/petclinic-application:latest > trivy.txt" 
+
+
+               }
+                
+            }
+        }
+
       
     }
 }
