@@ -16,7 +16,7 @@ spec:
       - name: petclinic
         image: nahid0002/petclinic-application:latest
         ports:
-        - containerPort: 8080
+        - containerPort: 8082
         imagePullPolicy: Always
 ---
 apiVersion: v1
@@ -31,4 +31,4 @@ spec:
   - name: http
     protocol: TCP
     port: 80
-    targetPort: 8080
+    targetPort: 8082
