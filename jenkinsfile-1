@@ -1,7 +1,6 @@
 pipeline {
     agent any
-    
-     tools{
+    tools{
         jdk 'jdk17'
         maven 'maven3'
     }
@@ -11,7 +10,6 @@ pipeline {
     }
 
     stages {
-        
         stage("Clean Workspace"){
             steps{
                 cleanWs()
@@ -35,8 +33,7 @@ pipeline {
                 sh "mvn test -DskipTests=true"
             }
         }
-        
-        stage("Sonarqube Analysis "){
+         stage("Sonarqube Analysis "){
             steps{
                 withSonarQubeEnv('sonar-server') {
                     sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Petclinic \
@@ -49,37 +46,28 @@ pipeline {
         stage("SonarQube Quality Gate"){
        
              steps {
-                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+                waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token' 
          }
 
      }
-     
-     stage("OWASP Dependency Check"){
+        stage("Build war file"){
+            steps{
+                sh "mvn clean install -DskipTests=true"
+            }
+        }
+        stage("OWASP Dependency Check"){
            steps{
-                dependencyCheck additionalArguments: '--scan ./ --format XML ' , odcInstallation: 'DP-Check'
+                dependencyCheck additionalArguments: '--scan ./' , odcInstallation: 'DP-Check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
         
-         stage("Build"){
-            steps{
-                sh "mvn clean install -DskipTests=true"
-            }
-        } 
-
-        stage('Docker Build and Test'){
-            steps{
-                sh "docker build . -t petclinic-application"
-
-                
-            }
-        }
-         stage("Docker image Push to Docker Hub"){
+        stage("Buuld and Push to Docker Hub"){
                steps{
                    
                 echo 'login into docker hub and pushing image....'
                 withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]){
-                     
+                     sh "docker build . -t petclinic-application"
                      sh "docker tag petclinic-application ${env.dockerHubUser}/petclinic-application:latest"
                      sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPassword}"
                      sh "docker push ${env.dockerHubUser}/petclinic-application:latest"
@@ -88,15 +76,34 @@ pipeline {
                }
            }
          }
+         
+          stage("TRIVY"){
+            steps{
 
-         stage("Deploy Using Docker"){
+                withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]){
+                     
+                    sh "trivy image ${env.dockerHubUser}/petclinic-application:latest > trivy.txt" 
+
+
+               }
+                
+            }
+        }
+         
+          stage("Deploy to Container"){
             steps{
                 sh " docker run -d --name petclinic-application -p 8082:8082 nahid0002/petclinic-application:latest "
             }
         }
-
-
-            stage('Clean up containers') {   //if container runs it will stop and remove this block
+        
+        stage("Deploy To Tomcat"){
+            steps{
+              sh "cp  /var/lib/jenkins/workspace/Real-World-CI-CD/target/petclinic.war /opt/apache-tomcat-9.0.65/webapps/ "
+            }
+        }
+         
+        
+           stage('Clean up containers') {   //if container runs it will stop and remove this block
           steps {
            script {
              try {
@@ -108,20 +115,9 @@ pipeline {
             }
           }
         }
-
-          stage("TRIVY"){
-            steps{
-
-                withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]){
-                     
-                    sh "trivy image nahid0002/petclinic-application:latest > trivy.txt" 
+        
 
 
-               }
-                
-            }
-        }
-
-      
+     
     }
 }

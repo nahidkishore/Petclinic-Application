@@ -76,14 +76,8 @@ pipeline {
                }
            }
          }
-         
-          stage("Deploy to Container"){
-            steps{
-                sh " docker run -d --name petclinic-application -p 8082:8082 nahid0002/petclinic-application:latest "
-            }
-        }
-         
-         stage("TRIVY"){
+
+           stage("TRIVY"){
             steps{
 
                 withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]){
@@ -95,6 +89,14 @@ pipeline {
                 
             }
         }
+         
+          stage("Deploy to Container"){
+            steps{
+                sh " docker run -d --name petclinic-application -p 8082:8082 nahid0002/petclinic-application:latest "
+            }
+        }
+         
+       
         
         
        
@@ -104,7 +106,7 @@ pipeline {
             steps {
                 script {
                    
-                    withKubeConfig([credentialsId: 'K8S', serverUrl: '']) {
+                    withKubeConfig([credentialsId: 'K8s', serverUrl: '']) {
                         sh ('kubectl apply -f deployment.yaml')
                     }
                 }
