@@ -1,81 +1,125 @@
 pipeline {
-    agent any 
+    agent any
     
     tools{
         jdk 'jdk17'
         maven 'maven3'
     }
-    environment {
+    
+     environment {
         SCANNER_HOME=tool 'sonar-scanner'
     }
-    
-     stages{
-           stage("Clean Workspace"){
+
+    stages {
+        stage("Clean Workspace"){
             steps{
                 cleanWs()
             }
         }
-        
-                stage('Git Checkout'){
+
+
+        stage("Git Checkout"){
             steps{
-                git url:'https://github.com/nahidkishore/Petclinic-Application.git', branch:'main'
-                
+               git branch: 'main', url: 'https://github.com/nahidkishore/Petclinic-Application.git'
             }
         }
-
         
         stage("Compile"){
             steps{
-                sh "mvn clean compile"
+                sh "mvn clean compile -DskipTests=true"
             }
         }
-        
-         stage("Test Cases"){
+          stage("Test Cases"){
             steps{
                 sh "mvn test -DskipTests=true"
             }
         }
         
-          stage('Sonarqube Analysis') {
-      environment {
-        SONAR_URL = "http://3.85.93.80:9000"
-      }
-      steps {
-        withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
-          sh 'mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
-        }
-      }
-    }
-stage("quality gate"){
-           steps {
-                 script {
-                     waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token' 
-                    }
-                } 
-        } 
-        
-        stage("Quality Gate") {
-            steps {
-                timeout(time: 1, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+        stage("Sonarqube Analysis "){
+            steps{
+                withSonarQubeEnv('sonar-server') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Petclinic \
+                    -Dsonar.java.binaries=. \
+                    -Dsonar.projectKey=Petclinic '''
                 }
             }
         }
         
-        stage("Build"){
+        stage("SonarQube Quality Gate"){
+       
+             steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token' 
+         }
+
+     }
+     
+     stage("Build"){
             steps{
-                sh " mvn clean install -DskipTests=true"
+                sh "mvn clean install -DskipTests=true"
             }
-        }
-        
+        } 
         
         stage("OWASP Dependency Check"){
-            steps{
-                dependencyCheck additionalArguments: '--scan ./ ' , odcInstallation: 'DP-Check'
+           steps{
+                dependencyCheck additionalArguments: '--scan ./' , odcInstallation: 'DP-Check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
-
+    
         
-     }
+
+        stage('Docker Build Application'){
+            steps{
+                sh "docker build . -t petclinic-application"
+
+                
+            }
+        }
+         stage("Docker image Push to Docker Hub"){
+               steps{
+                   
+                echo 'login into docker hub and pushing image....'
+                withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]){
+                     
+                     sh "docker tag petclinic-application ${env.dockerHubUser}/petclinic-application:latest"
+                     sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPassword}"
+                     sh "docker push ${env.dockerHubUser}/petclinic-application:latest"
+
+
+               }
+           }
+         }
+         stage("Deploy Using Docker"){
+            steps{
+                sh " docker run -d --name petclinic-application -p 8082:8082 nahid0002/petclinic-application:latest "
+            }
+        }
+         
+         
+         stage('Clean up containers') {   //if container runs it will stop and remove this block
+          steps {
+           script {
+             try {
+                sh 'docker stop petclinic-application'
+                sh 'docker rm petclinic-application'
+                } catch (Exception e) {
+                  echo "Container petclinic-application not found, moving to next stage"  
+                }
+            }
+          }
+        }
+         stage("TRIVY"){
+            steps{
+
+                withCredentials([usernamePassword(credentialsId: 'dockerHub', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]){
+                     
+                    sh "trivy image nahid0002/petclinic-application:latest > trivy.txt" 
+
+
+               }
+                
+            }
+        }
+     
+    }
 }

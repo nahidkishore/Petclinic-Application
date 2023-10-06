@@ -89,6 +89,13 @@ pipeline {
            }
          }
 
+         stage("Deploy Using Docker"){
+            steps{
+                sh " docker run -d --name petclinic-application -p 8082:8082 nahid0002/petclinic-application:latest "
+            }
+        }
+
+
             stage('Clean up containers') {   //if container runs it will stop and remove this block
           steps {
            script {
