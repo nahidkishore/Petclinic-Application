@@ -77,6 +77,12 @@ pipeline {
            }
          }
          
+          stage("Deploy to Container"){
+            steps{
+                sh " docker run -d --name petclinic-application -p 8082:8082 nahid0002/petclinic-application:latest "
+            }
+        }
+         
          stage("TRIVY"){
             steps{
 
@@ -89,9 +95,19 @@ pipeline {
                 
             }
         }
-        stage("Deploy to Container"){
-            steps{
-                sh " docker run -d --name petclinic-application -p 8082:8082 nahid0002/petclinic-application:latest "
+        
+        
+       
+        
+       
+        stage('K8S Deploy') {
+            steps {
+                script {
+                   
+                    withKubeConfig([credentialsId: 'K8S', serverUrl: '']) {
+                        sh ('kubectl apply -f deployment.yaml')
+                    }
+                }
             }
         }
 
