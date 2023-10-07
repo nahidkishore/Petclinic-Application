@@ -85,3 +85,6 @@ pipeline {
       
     }
 }
+#after workspace change your job name 
+ubuntu ALL=(ALL) NOPASSWD: /bin/cp /var/lib/jenkins/workspace/Devops-CICD-Real-Time-Projects/target/petclinic.war /opt/apache-tomcat-9.0.65/webapps/ 
+jenkins ALL=(ALL) NOPASSWD: /bin/cp /var/lib/jenkins/workspace/Devops-CICD-Real-Time-Projects/target/petclinic.war /opt/apache-tomcat-9.0.65/webapps/

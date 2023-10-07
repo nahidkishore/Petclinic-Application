@@ -50,7 +50,7 @@ pipeline {
          }
 
      }
-        stage("Build war file"){
+        stage("Build Artifact"){
             steps{
                 sh "mvn clean install -DskipTests=true"
             }
@@ -95,14 +95,14 @@ pipeline {
                 sh " docker run -d --name petclinic-application -p 8082:8082 nahid0002/petclinic-application:latest "
             }
         }
+        
+        stage("Deploy To Tomcat"){
+            steps{
+                sh "cp  /var/lib/jenkins/workspace/Devops-CICD-Real-Time-Projects/target/petclinic.war /opt/apache-tomcat-9.0.65/webapps/ "
+            }
+        }
          
-       
-        
-        
-       
-        
-       
-        stage('K8S Deploy') {
+          stage('Deploy to kubernets') {
             steps {
                 script {
                    
@@ -112,6 +112,14 @@ pipeline {
                 }
             }
         }
+
+        
+       
+        
+        
+       
+        
+      
 
 
 
