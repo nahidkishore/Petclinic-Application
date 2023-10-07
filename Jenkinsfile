@@ -92,7 +92,7 @@ pipeline {
          
           stage("Deploy to Container"){
             steps{
-                sh " docker run -d --name petclinic-application -p 8082:8082 nahid0002/petclinic-application:latest "
+                sh " docker run -d --name petclinic-application -p 8089:8082 nahid0002/petclinic-application:latest "
             }
         }
         
